@@ -1,0 +1,10 @@
+target_link_libraries(
+     ShadowVolume
+        glad
+        glfw3
+        pthread
+        dl
+        X11
+        freeimage
+        freetype
+)
