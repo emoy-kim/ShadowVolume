@@ -31,17 +31,17 @@ void emitSideOfVolume(vec3 start, vec3 end)
 void main()
 {
    // six vertices of triangles_adjacency
-   // 1 . . . . . . 2 . . . e3 . . .  3
+   // 5 . . . . . . 4 . . . . . . . . 3
    //  .           / \              .
    //   .         /   \           .
-   //    e2      e0    e4       .
+   //    e5      e1    e4       e3
    //      .    /       \     .
    //       .  /         \  .
-   //        0 --- e1 --- 4
+   //        0 --- e0 --- 2
    //         .         .
-   //          e5     .
+   //          e2     .
    //            .  .
-   //             5
+   //             1
    vec3 e0 = gl_in[2].gl_Position.xyz - gl_in[0].gl_Position.xyz;
    vec3 e1 = gl_in[4].gl_Position.xyz - gl_in[0].gl_Position.xyz;
    vec3 e2 = gl_in[1].gl_Position.xyz - gl_in[0].gl_Position.xyz;
@@ -57,12 +57,10 @@ void main()
 
       n = cross( e3, e4 );
       light_direction = LightPosition - gl_in[2].gl_Position.xyz;
-
       if (dot( n, light_direction ) <= zero) emitSideOfVolume( gl_in[2].gl_Position.xyz, gl_in[4].gl_Position.xyz );
 
       n = cross( e1, e5 );
       light_direction = LightPosition - gl_in[4].gl_Position.xyz;
-
       if (dot( n, light_direction ) <= zero) emitSideOfVolume( gl_in[4].gl_Position.xyz, gl_in[0].gl_Position.xyz );
 
       light_direction = normalize( gl_in[0].gl_Position.xyz - LightPosition );
