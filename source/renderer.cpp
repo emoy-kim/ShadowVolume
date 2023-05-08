@@ -426,6 +426,7 @@ void RendererGL::play()
 
    TextShader->setTextUniformLocations();
    SceneShader->setSceneUniformLocations( 1 );
+   ShadowVolumeShader->setShadowVolumeUniformLocations();
 
    while (!glfwWindowShouldClose( Window )) {
       if (!Pause) render();
