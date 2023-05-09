@@ -368,7 +368,9 @@ void RendererGL::drawShadowVolumeWithZFail() const
 
    glUseProgram( ShadowVolumeShader->getShaderProgram() );
    const glm::vec4 light_position_in_eye = MainCamera->getViewMatrix() * Lights->getLightPosition( 0 );
-   ShadowVolumeShader->uniform3fv( "LightPosition", glm::vec3(light_position_in_eye) );
+   ShadowVolumeShader->uniform4fv( "LightPosition", light_position_in_eye );
+   ShadowVolumeShader->uniform1i( "Robust", 0 );
+   ShadowVolumeShader->uniform1i( "IsZFailAlgorithm", 1 );
    drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
 
    glDepthMask( GL_TRUE );
@@ -395,7 +397,9 @@ void RendererGL::drawShadowVolumeWithZPass() const
 
    glUseProgram( ShadowVolumeShader->getShaderProgram() );
    const glm::vec4 light_position_in_eye = MainCamera->getViewMatrix() * Lights->getLightPosition( 0 );
-   ShadowVolumeShader->uniform3fv( "LightPosition", glm::vec3(light_position_in_eye) );
+   ShadowVolumeShader->uniform4fv( "LightPosition", light_position_in_eye );
+   ShadowVolumeShader->uniform1i( "Robust", 0 );
+   ShadowVolumeShader->uniform1i( "IsZFailAlgorithm", 0 );
    drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
 
    glDepthMask( GL_TRUE );
@@ -470,9 +474,9 @@ void RendererGL::render() const
    switch (Algorithm) {
       case ALGORITHM::Z_FAIL: drawShadowVolumeWithZFail(); break;
       case ALGORITHM::Z_PASS: drawShadowVolumeWithZPass(); break;
+      //case ALGORITHM::GPU_GEMS3_CH11:
    }
-
-   //writeStencilTexture( "../stencil.png" );
+   writeStencilTexture( "../stencil.png" );
    drawShadow();
    glDisable( GL_STENCIL_TEST );
 

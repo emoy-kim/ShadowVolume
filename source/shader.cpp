@@ -130,6 +130,8 @@ void ShaderGL::setShadowVolumeUniformLocations()
 {
    setBasicTransformationUniforms();
    addUniformLocation( "LightPosition" );
+   addUniformLocation( "Robust" );
+   addUniformLocation( "IsZFailAlgorithm" );
 }
 
 void ShaderGL::setSceneUniformLocations(int light_num)
