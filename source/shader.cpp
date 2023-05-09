@@ -163,7 +163,6 @@ void ShaderGL::setSceneUniformLocations(int light_num)
 
    addUniformLocation( "UseTexture" );
    addUniformLocation( "LightIndex" );
-   addUniformLocation( "LightModelViewProjectionMatrix" );
 }
 
 void ShaderGL::transferBasicTransformationUniforms(const glm::mat4& to_world, const CameraGL* camera) const
