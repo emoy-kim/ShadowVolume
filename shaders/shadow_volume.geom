@@ -8,7 +8,7 @@ layout (triangle_strip, max_vertices = 18) out;
 
 const float zero = 0.0f;
 const float one = 1.0f;
-const float epsilon = 1e-4f;
+const float epsilon = 1e-1f;
 
 void emitSideOfVolume(vec3 start, vec3 end)
 {
@@ -53,15 +53,15 @@ void main()
    vec3 light_direction = LightPosition - gl_in[0].gl_Position.xyz;
    if (dot( n, light_direction ) > epsilon) {
       n = cross( e2, e0 );
-      if (dot( n, light_direction ) <= zero) emitSideOfVolume( gl_in[0].gl_Position.xyz, gl_in[2].gl_Position.xyz );
+      if (dot( n, light_direction ) < epsilon) emitSideOfVolume( gl_in[0].gl_Position.xyz, gl_in[2].gl_Position.xyz );
 
       n = cross( e3, e4 );
       light_direction = LightPosition - gl_in[2].gl_Position.xyz;
-      if (dot( n, light_direction ) <= zero) emitSideOfVolume( gl_in[2].gl_Position.xyz, gl_in[4].gl_Position.xyz );
+      if (dot( n, light_direction ) < epsilon) emitSideOfVolume( gl_in[2].gl_Position.xyz, gl_in[4].gl_Position.xyz );
 
       n = cross( e1, e5 );
       light_direction = LightPosition - gl_in[4].gl_Position.xyz;
-      if (dot( n, light_direction ) <= zero) emitSideOfVolume( gl_in[4].gl_Position.xyz, gl_in[0].gl_Position.xyz );
+      if (dot( n, light_direction ) < epsilon) emitSideOfVolume( gl_in[4].gl_Position.xyz, gl_in[0].gl_Position.xyz );
 
       light_direction = normalize( gl_in[0].gl_Position.xyz - LightPosition );
       gl_Position = ProjectionMatrix * vec4(gl_in[0].gl_Position.xyz + light_direction * epsilon, one);

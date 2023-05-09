@@ -48,6 +48,7 @@ private:
    void initialize();
    void writeFrame(const std::string& name) const;
    void writeDepthTexture(const std::string& name) const;
+   void writeStencilTexture(const std::string& name) const;
 
    static void printOpenGLInformation();
 

@@ -73,11 +73,6 @@ float getSpotlightFactor(in vec3 normalized_light_vector, in int light_index)
    return factor >= cos( radians( cutoff_angle ) ) ? pow( factor, Lights[light_index].SpotlightExponent ) : zero;
 }
 
-float getShadowFactor()
-{
-   return one;
-}
-
 vec4 calculateLightingEquation()
 {
    vec4 color = Material.EmissionColor + GlobalAmbient * Material.AmbientColor;
@@ -110,7 +105,7 @@ vec4 calculateLightingEquation()
       pow( specular_intensity, Material.SpecularExponent ) * 
       Lights[LightIndex].SpecularColor * Material.SpecularColor;
 
-   color += local_color * getShadowFactor();
+   color += local_color;
    return color;
 }
 

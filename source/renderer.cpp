@@ -8,7 +8,8 @@ RendererGL::RendererGL() :
    TextShader( std::make_unique<ShaderGL>() ), ShadowVolumeShader( std::make_unique<ShaderGL>() ),
    SceneShader( std::make_unique<ShaderGL>() ),
    WallObject( std::make_unique<ObjectGL>() ),
-   BunnyObject( std::make_unique<ObjectGL>() ), Lights( std::make_unique<LightGL>() )
+   BunnyObject( std::make_unique<ObjectGL>() ),
+   Lights( std::make_unique<LightGL>() )
 {
    Renderer = this;
 
@@ -113,6 +114,25 @@ void RendererGL::writeDepthTexture(const std::string& name) const
    delete [] buffer;
 }
 
+void RendererGL::writeStencilTexture(const std::string& name) const
+{
+   const int size = FrameWidth * FrameHeight;
+   auto* buffer = new uint8_t[size];
+   auto* raw_buffer = new uint32_t[size];
+   glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+   glReadBuffer( GL_STENCIL_ATTACHMENT );
+   glReadPixels( 0, 0, FrameWidth, FrameHeight, GL_STENCIL_INDEX, GL_UNSIGNED_INT, raw_buffer );
+   for (int i = 0 ; i < size; ++i) buffer[i] = raw_buffer[i] == 0 ? 255 : 0;
+   FIBITMAP* image = FreeImage_ConvertFromRawBits(
+      buffer, FrameWidth, FrameHeight, FrameWidth, 8,
+      FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, false
+   );
+   FreeImage_Save( FIF_PNG, image, name.c_str() );
+   FreeImage_Unload( image );
+   delete [] raw_buffer;
+   delete [] buffer;
+}
+
 void RendererGL::cleanup(GLFWwindow* window)
 {
    glfwSetWindowShouldClose( window, GLFW_TRUE );
@@ -202,7 +222,7 @@ void RendererGL::registerCallbacks() const
 
 void RendererGL::setLights() const
 {
-   const glm::vec4 light_position(500.0f, 500.0f, 500.0f, 0.0f);
+   const glm::vec4 light_position(500.0f, 500.0f, 500.0f, 1.0f);
    const glm::vec4 ambient_color(1.0f, 1.0f, 1.0f, 1.0f);
    const glm::vec4 diffuse_color(0.9f, 0.9f, 0.9f, 1.0f);
    const glm::vec4 specular_color(0.9f, 0.9f, 0.9f, 1.0f);
@@ -213,13 +233,13 @@ void RendererGL::setWallObject() const
 {
    constexpr float half_length = 128.0f;
    std::vector<glm::vec3> wall_vertices;
-   wall_vertices.emplace_back( -half_length, 0.0f, -half_length );
+   wall_vertices.emplace_back( half_length, 0.0f, half_length );
    wall_vertices.emplace_back( half_length, 0.0f, -half_length );
-   wall_vertices.emplace_back( half_length, 0.0f, half_length );
-
    wall_vertices.emplace_back( -half_length, 0.0f, -half_length );
-   wall_vertices.emplace_back( half_length, 0.0f, half_length );
+
    wall_vertices.emplace_back( -half_length, 0.0f, half_length );
+   wall_vertices.emplace_back( half_length, 0.0f, half_length );
+   wall_vertices.emplace_back( -half_length, 0.0f, -half_length );
 
    std::vector<glm::vec3> wall_normals;
    wall_normals.emplace_back( 0.0f, 1.0f, 0.0f );
@@ -314,6 +334,7 @@ void RendererGL::drawDepthMap() const
 {
    glViewport( 0, 0, FrameWidth, FrameHeight );
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+   glDepthFunc( GL_LESS );
    glDrawBuffer( GL_NONE );
    glUseProgram( SceneShader->getShaderProgram() );
    drawBunnyObject( SceneShader.get(), MainCamera.get() );
@@ -322,8 +343,13 @@ void RendererGL::drawDepthMap() const
 
 void RendererGL::drawShadowVolumeWithZFail() const
 {
+   // Need to do the depth test, but do not write the result.
    glDepthMask( GL_FALSE );
+
+   // Do not near/far plane clipping due to projection-to-infinity.
    glEnable( GL_DEPTH_CLAMP );
+
+   // All the front- or back-facing facets should be rendered to generate the shadow volume.
    glDisable( GL_CULL_FACE );
 
    // Only the depth test matters. (test order: stencil -> depth)
@@ -337,24 +363,25 @@ void RendererGL::drawShadowVolumeWithZFail() const
    ShadowVolumeShader->uniform3fv( "LightPosition", glm::vec3(light_position_in_eye) );
    drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
 
+   glDepthMask( GL_TRUE );
    glDisable( GL_DEPTH_CLAMP );
    glEnable( GL_CULL_FACE );
 }
 
 void RendererGL::drawShadow() const
 {
-   glViewport( 0, 0, FrameWidth, FrameHeight );
-   glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-   glDrawBuffer( GL_BACK ); // GL_BACK is the initial value for double-buffered contexts.
-   glUseProgram( SceneShader->getShaderProgram() );
+   // GL_BACK is the initial value for double-buffered contexts.
+   glDrawBuffer( GL_BACK );
 
+   glStencilFunc( GL_EQUAL, 0, 0xFF );
+   glStencilOpSeparate( GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP );
+
+   glDepthFunc( GL_EQUAL );
+
+   glUseProgram( SceneShader->getShaderProgram() );
    Lights->transferUniformsToShader( SceneShader.get() );
    glUniform1i( SceneShader->getLocation( "LightIndex" ), ActiveLightIndex );
    glUniform1i( SceneShader->getLocation( "UseTexture" ), 0 );
-
-   //const glm::mat4 model_view_projection = light_crop_matrix * LightCamera->getProjectionMatrix() * LightCamera->getViewMatrix();
-   //glUniformMatrix4fv( SceneShader->getLocation( "LightModelViewProjectionMatrix" ), 1, GL_FALSE, &model_view_projection[0][0] );
-
    drawBunnyObject( SceneShader.get(), MainCamera.get() );
    drawBoxObject( SceneShader.get(), MainCamera.get() );
 }
@@ -406,7 +433,8 @@ void RendererGL::render() const
 
    glEnable( GL_STENCIL_TEST );
    drawShadowVolumeWithZFail();
-   
+   //writeStencilTexture( "../stencil.png" );
+   drawShadow();
    glDisable( GL_STENCIL_TEST );
 
    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
