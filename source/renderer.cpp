@@ -2,14 +2,11 @@
 
 RendererGL::RendererGL() :
    Window( nullptr ), Pause( false ), FrameWidth( 1920 ), FrameHeight( 1080 ), ActiveLightIndex( 0 ),
-   ClickedPoint( -1, -1 ),
-   Texter( std::make_unique<TextGL>() ), MainCamera( std::make_unique<CameraGL>() ),
-   TextCamera( std::make_unique<CameraGL>() ),
+   Algorithm( ALGORITHM::Z_FAIL ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
+   MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
    TextShader( std::make_unique<ShaderGL>() ), ShadowVolumeShader( std::make_unique<ShaderGL>() ),
-   SceneShader( std::make_unique<ShaderGL>() ),
-   WallObject( std::make_unique<ObjectGL>() ),
-   BunnyObject( std::make_unique<ObjectGL>() ),
-   Lights( std::make_unique<LightGL>() )
+   SceneShader( std::make_unique<ShaderGL>() ), WallObject( std::make_unique<ObjectGL>() ),
+   BunnyObject( std::make_unique<ObjectGL>() ), Lights( std::make_unique<LightGL>() )
 {
    Renderer = this;
 
@@ -143,6 +140,17 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
    if (action != GLFW_PRESS) return;
 
    switch (key) {
+      case GLFW_KEY_1:
+         Renderer->Algorithm = ALGORITHM::Z_FAIL;
+         std::cout << "Z-Fail Algorithm Selected\n";
+         break;
+      case GLFW_KEY_2:
+         Renderer->Algorithm = ALGORITHM::Z_PASS;
+         std::cout << "Z-Pass Algorithm Selected\n";
+         break;
+      case GLFW_KEY_3:
+         Renderer->Algorithm = ALGORITHM::GPU_GEMS3_CH11;
+         break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
          break;
@@ -353,10 +361,37 @@ void RendererGL::drawShadowVolumeWithZFail() const
    glDisable( GL_CULL_FACE );
 
    // Only the depth test matters. (test order: stencil -> depth)
-   glStencilFunc( GL_ALWAYS, 0, 0xFF );
+   glStencilFunc( GL_ALWAYS, 0, ~0 );
 
    glStencilOpSeparate( GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP );
    glStencilOpSeparate( GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP );
+
+   glUseProgram( ShadowVolumeShader->getShaderProgram() );
+   const glm::vec4 light_position_in_eye = MainCamera->getViewMatrix() * Lights->getLightPosition( 0 );
+   ShadowVolumeShader->uniform3fv( "LightPosition", glm::vec3(light_position_in_eye) );
+   drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
+
+   glDepthMask( GL_TRUE );
+   glDisable( GL_DEPTH_CLAMP );
+   glEnable( GL_CULL_FACE );
+}
+
+void RendererGL::drawShadowVolumeWithZPass() const
+{
+   // Need to do the depth test, but do not write the result.
+   glDepthMask( GL_FALSE );
+
+   // Do not near/far plane clipping due to projection-to-infinity.
+   glEnable( GL_DEPTH_CLAMP );
+
+   // All the front- or back-facing facets should be rendered to generate the shadow volume.
+   glDisable( GL_CULL_FACE );
+
+   // Only the depth test matters. (test order: stencil -> depth)
+   glStencilFunc( GL_ALWAYS, 0, ~0 );
+
+   glStencilOpSeparate( GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP );
+   glStencilOpSeparate( GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP );
 
    glUseProgram( ShadowVolumeShader->getShaderProgram() );
    const glm::vec4 light_position_in_eye = MainCamera->getViewMatrix() * Lights->getLightPosition( 0 );
@@ -386,7 +421,7 @@ void RendererGL::drawShadow() const
    drawBoxObject( SceneShader.get(), MainCamera.get() );
 }
 
-void RendererGL::drawText(const std::string& text) const
+void RendererGL::drawText(const std::string& text, glm::vec2 start_position) const
 {
    std::vector<TextGL::Glyph*> glyphs;
    Texter->getGlyphsFromText( glyphs, text );
@@ -399,7 +434,7 @@ void RendererGL::drawText(const std::string& text) const
    glBlendFunc( GL_SRC_ALPHA, GL_ONE );
    glDisable( GL_DEPTH_TEST );
 
-   glm::vec2 text_position(50.0f, 1000.0f);
+   glm::vec2 text_position = start_position;
    const ObjectGL* glyph_object = Texter->getGlyphObject();
    glBindVertexArray( glyph_object->getVAO() );
    for (const auto& glyph : glyphs) {
@@ -432,7 +467,11 @@ void RendererGL::render() const
    //writeDepthTexture( "../depth.png" );
 
    glEnable( GL_STENCIL_TEST );
-   drawShadowVolumeWithZFail();
+   switch (Algorithm) {
+      case ALGORITHM::Z_FAIL: drawShadowVolumeWithZFail(); break;
+      case ALGORITHM::Z_PASS: drawShadowVolumeWithZPass(); break;
+   }
+
    //writeStencilTexture( "../stencil.png" );
    drawShadow();
    glDisable( GL_STENCIL_TEST );
@@ -441,7 +480,7 @@ void RendererGL::render() const
    const auto fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
    std::stringstream text;
    text << std::fixed << std::setprecision( 2 ) << fps << " fps";
-   drawText( text.str() );
+   drawText( text.str(), { 50.0f, 1000.0f } );
 }
 
 void RendererGL::play()

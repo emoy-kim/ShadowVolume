@@ -27,12 +27,15 @@ public:
    void play();
 
 private:
+   enum class ALGORITHM { Z_FAIL = 0, Z_PASS, GPU_GEMS3_CH11 };
+
    inline static RendererGL* Renderer = nullptr;
    GLFWwindow* Window;
    bool Pause;
    int FrameWidth;
    int FrameHeight;
    int ActiveLightIndex;
+   ALGORITHM Algorithm;
    glm::ivec2 ClickedPoint;
    std::unique_ptr<TextGL> Texter;
    std::unique_ptr<CameraGL> MainCamera;
@@ -67,7 +70,8 @@ private:
    void drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const;
    void drawDepthMap() const;
    void drawShadowVolumeWithZFail() const;
+   void drawShadowVolumeWithZPass() const;
    void drawShadow() const;
-   void drawText(const std::string& text) const;
+   void drawText(const std::string& text, glm::vec2 start_position) const;
    void render() const;
 };
