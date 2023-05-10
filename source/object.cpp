@@ -299,6 +299,25 @@ void ObjectGL::setObject(
    addTexture( texture_file_path, is_grayscale );
 }
 
+void ObjectGL::findNormals(
+   std::vector<glm::vec3>& normals,
+   const std::vector<glm::vec3>& vertices,
+   const std::vector<GLuint>& vertex_indices
+)
+{
+   normals.resize( vertices.size() );
+   const auto size = static_cast<int>(vertex_indices.size());
+   for (int i = 0; i < size; i += 3) {
+      const int n0 = vertex_indices[i];
+      const int n1 = vertex_indices[i + 1];
+      const int n2 = vertex_indices[i + 2];
+      const glm::vec3 normal = glm::cross( vertices[n1] - vertices[n0], vertices[n2] - vertices[n0] );
+      normals[n0] = normal;
+      normals[n1] = normal;
+      normals[n2] = normal;
+   }
+}
+
 void ObjectGL::findAdjacency(const std::vector<glm::vec3>& vertices, const std::vector<GLuint>& indices)
 {
    const auto size = static_cast<int>(indices.size());
@@ -419,16 +438,19 @@ bool ObjectGL::readObjectFile(
       else std::getline( file, word );
    }
 
+   if (!found_normals) findNormals( normal_buffer, vertex_buffer, vertex_indices );
+
    if (!AdjacencyMode) {
       for (size_t i = 0; i < vertex_indices.size(); ++i) {
          vertices.emplace_back( vertex_buffer[vertex_indices[i]] );
          if (found_normals) normals.emplace_back( normal_buffer[normal_indices[i]] );
+         else normals.emplace_back( normal_buffer[vertex_indices[i]] );
          if (found_textures) textures.emplace_back( texture_buffer[texture_indices[i]] );
       }
    }
    else {
       vertices = std::move( vertex_buffer );
-      if (found_normals) normals = std::move( normal_buffer );
+      normals = std::move( normal_buffer );
       if (found_textures) textures = std::move( texture_buffer );
       findAdjacency( vertices, vertex_indices );
    }

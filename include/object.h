@@ -150,6 +150,11 @@ private:
       std::vector<glm::vec3>& normals,
       std::vector<glm::vec2>& textures
    );
+   void findNormals(
+      std::vector<glm::vec3>& normals,
+      const std::vector<glm::vec3>& vertices,
+      const std::vector<GLuint>& vertex_indices
+   );
    void findAdjacency(const std::vector<glm::vec3>& vertices, const std::vector<GLuint>& indices);
    [[nodiscard]] bool readObjectFile(
       std::vector<glm::vec3>& vertices,
