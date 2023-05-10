@@ -137,12 +137,16 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
 
    switch (key) {
       case GLFW_KEY_1:
-         Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::Z_FAIL;
-         std::cout << "Z-Fail Algorithm Selected\n";
+         if (!Renderer->Pause) {
+            Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::Z_FAIL;
+            std::cout << "Z-Fail Algorithm Selected\n";
+         }
          break;
       case GLFW_KEY_2:
-         Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::Z_PASS;
-         std::cout << "Z-Pass Algorithm Selected\n";
+         if (!Renderer->Pause) {
+            Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::Z_PASS;
+            std::cout << "Z-Pass Algorithm Selected\n";
+         }
          break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
@@ -434,6 +438,12 @@ void RendererGL::drawText(const std::string& text, glm::vec2 start_position) con
    const ObjectGL* glyph_object = Texter->getGlyphObject();
    glBindVertexArray( glyph_object->getVAO() );
    for (const auto& glyph : glyphs) {
+      if (glyph->IsNewLine) {
+         text_position.x = start_position.x;
+         text_position.y -= Texter->getFontSize();
+         continue;
+      }
+
       const glm::vec2 position(
          std::round( text_position.x + glyph->Bearing.x ),
          std::round( text_position.y + glyph->Bearing.y - glyph->Size.y )
@@ -458,7 +468,6 @@ void RendererGL::render() const
    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-
    {
       glViewport( 0, 0, FrameWidth, FrameHeight );
       drawDepthMap();
@@ -470,7 +479,10 @@ void RendererGL::render() const
       drawShadow();
       glDisable( GL_STENCIL_TEST );
    }
+   std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
+   const auto left_fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
+   start = std::chrono::system_clock::now();
    {
       glViewport( FrameWidth, 0, FrameWidth, FrameHeight );
       drawDepthMap();
@@ -482,15 +494,15 @@ void RendererGL::render() const
       drawShadow();
       glDisable( GL_STENCIL_TEST );
    }
+   end = std::chrono::system_clock::now();
+   const auto right_fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
-   std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
-   const auto fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
    std::stringstream text;
-   if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::Z_FAIL) text << "Z-Fail Comparison ";
-   else text << "Z-Pass Comparison ";
-   text << "(Left: Not Robust, Right: Robust): ";
-   text << std::fixed << std::setprecision( 2 ) << fps << " fps";
-   drawText( text.str(), { 50.0f, 50.0f } );
+   if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::Z_FAIL) text << "Z-Fail Comparison\n";
+   else text << "Z-Pass Comparison\n";
+   text << "- Left: Not Robust, " << std::fixed << std::setprecision( 2 ) << left_fps << " fps\n";
+   text << "- Right: Robust, " << std::fixed << std::setprecision( 2 ) << right_fps << " fps";
+   drawText( text.str(), { 80.0f, 120.0f } );
 }
 
 void RendererGL::play()
