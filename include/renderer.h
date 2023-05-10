@@ -17,7 +17,7 @@ class RendererGL final
 {
 public:
    RendererGL();
-   ~RendererGL();
+   ~RendererGL() = default;
 
    RendererGL(const RendererGL&) = delete;
    RendererGL(const RendererGL&&) = delete;
@@ -27,7 +27,7 @@ public:
    void play();
 
 private:
-   enum class ALGORITHM { Z_FAIL = 0, Z_PASS, GPU_GEMS3_CH11 };
+   enum class ALGORITHM_TO_COMPARE { Z_FAIL = 0, Z_PASS };
 
    inline static RendererGL* Renderer = nullptr;
    GLFWwindow* Window;
@@ -35,7 +35,6 @@ private:
    int FrameWidth;
    int FrameHeight;
    int ActiveLightIndex;
-   ALGORITHM Algorithm;
    glm::ivec2 ClickedPoint;
    std::unique_ptr<TextGL> Texter;
    std::unique_ptr<CameraGL> MainCamera;
@@ -46,6 +45,7 @@ private:
    std::unique_ptr<ObjectGL> WallObject;
    std::unique_ptr<ObjectGL> BunnyObject;
    std::unique_ptr<LightGL> Lights;
+   ALGORITHM_TO_COMPARE AlgorithmToCompare;
 
    void registerCallbacks() const;
    void initialize();
@@ -69,8 +69,8 @@ private:
    void drawBoxObject(ShaderGL* shader, const CameraGL* camera) const;
    void drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const;
    void drawDepthMap() const;
-   void drawShadowVolumeWithZFail() const;
-   void drawShadowVolumeWithZPass() const;
+   void drawShadowVolumeWithZFail(bool robust) const;
+   void drawShadowVolumeWithZPass(bool robust) const;
    void drawShadow() const;
    void drawText(const std::string& text, glm::vec2 start_position) const;
    void render() const;

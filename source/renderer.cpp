@@ -1,21 +1,17 @@
 #include "renderer.h"
 
 RendererGL::RendererGL() :
-   Window( nullptr ), Pause( false ), FrameWidth( 1920 ), FrameHeight( 1080 ), ActiveLightIndex( 0 ),
-   Algorithm( ALGORITHM::Z_FAIL ), ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ),
-   MainCamera( std::make_unique<CameraGL>() ), TextCamera( std::make_unique<CameraGL>() ),
-   TextShader( std::make_unique<ShaderGL>() ), ShadowVolumeShader( std::make_unique<ShaderGL>() ),
-   SceneShader( std::make_unique<ShaderGL>() ), WallObject( std::make_unique<ObjectGL>() ),
-   BunnyObject( std::make_unique<ObjectGL>() ), Lights( std::make_unique<LightGL>() )
+   Window( nullptr ), Pause( false ), FrameWidth( 1500 ), FrameHeight( 1000 ), ActiveLightIndex( 0 ),
+   ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ), MainCamera( std::make_unique<CameraGL>() ),
+   TextCamera( std::make_unique<CameraGL>() ), TextShader( std::make_unique<ShaderGL>() ),
+   ShadowVolumeShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
+   WallObject( std::make_unique<ObjectGL>() ), BunnyObject( std::make_unique<ObjectGL>() ),
+   Lights( std::make_unique<LightGL>() ), AlgorithmToCompare( ALGORITHM_TO_COMPARE::Z_FAIL )
 {
    Renderer = this;
 
    initialize();
    printOpenGLInformation();
-}
-
-RendererGL::~RendererGL()
-{
 }
 
 void RendererGL::printOpenGLInformation()
@@ -40,7 +36,7 @@ void RendererGL::initialize()
    glfwWindowHint( GLFW_RESIZABLE, GLFW_FALSE );
    glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
-   Window = glfwCreateWindow( FrameWidth, FrameHeight, "Main Camera", nullptr, nullptr );
+   Window = glfwCreateWindow( FrameWidth * 2, FrameHeight, "Shadow Volumes", nullptr, nullptr );
    glfwMakeContextCurrent( Window );
 
    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -53,7 +49,7 @@ void RendererGL::initialize()
    glEnable( GL_DEPTH_TEST );
    glClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
 
-   Texter->initialize();
+   Texter->initialize( 30.0f );
 
    TextCamera->update2DCamera( FrameWidth, FrameHeight );
    MainCamera->updatePerspectiveCamera( FrameWidth, FrameHeight );
@@ -141,15 +137,12 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
 
    switch (key) {
       case GLFW_KEY_1:
-         Renderer->Algorithm = ALGORITHM::Z_FAIL;
+         Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::Z_FAIL;
          std::cout << "Z-Fail Algorithm Selected\n";
          break;
       case GLFW_KEY_2:
-         Renderer->Algorithm = ALGORITHM::Z_PASS;
+         Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::Z_PASS;
          std::cout << "Z-Pass Algorithm Selected\n";
-         break;
-      case GLFW_KEY_3:
-         Renderer->Algorithm = ALGORITHM::GPU_GEMS3_CH11;
          break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
@@ -340,7 +333,6 @@ void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
 
 void RendererGL::drawDepthMap() const
 {
-   glViewport( 0, 0, FrameWidth, FrameHeight );
    glBindFramebuffer( GL_FRAMEBUFFER, 0 );
    glDepthFunc( GL_LESS );
    glDrawBuffer( GL_NONE );
@@ -349,7 +341,7 @@ void RendererGL::drawDepthMap() const
    drawBoxObject( SceneShader.get(), MainCamera.get() );
 }
 
-void RendererGL::drawShadowVolumeWithZFail() const
+void RendererGL::drawShadowVolumeWithZFail(bool robust) const
 {
    // Need to do the depth test, but do not write the result.
    glDepthMask( GL_FALSE );
@@ -369,7 +361,7 @@ void RendererGL::drawShadowVolumeWithZFail() const
    glUseProgram( ShadowVolumeShader->getShaderProgram() );
    const glm::vec4 light_position_in_eye = MainCamera->getViewMatrix() * Lights->getLightPosition( 0 );
    ShadowVolumeShader->uniform4fv( "LightPosition", light_position_in_eye );
-   ShadowVolumeShader->uniform1i( "Robust", 0 );
+   ShadowVolumeShader->uniform1i( "Robust", robust ? 1 : 0 );
    ShadowVolumeShader->uniform1i( "IsZFailAlgorithm", 1 );
    drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
 
@@ -378,7 +370,7 @@ void RendererGL::drawShadowVolumeWithZFail() const
    glEnable( GL_CULL_FACE );
 }
 
-void RendererGL::drawShadowVolumeWithZPass() const
+void RendererGL::drawShadowVolumeWithZPass(bool robust) const
 {
    // Need to do the depth test, but do not write the result.
    glDepthMask( GL_FALSE );
@@ -398,7 +390,7 @@ void RendererGL::drawShadowVolumeWithZPass() const
    glUseProgram( ShadowVolumeShader->getShaderProgram() );
    const glm::vec4 light_position_in_eye = MainCamera->getViewMatrix() * Lights->getLightPosition( 0 );
    ShadowVolumeShader->uniform4fv( "LightPosition", light_position_in_eye );
-   ShadowVolumeShader->uniform1i( "Robust", 0 );
+   ShadowVolumeShader->uniform1i( "Robust", robust ? 1 : 0 );
    ShadowVolumeShader->uniform1i( "IsZFailAlgorithm", 0 );
    drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
 
@@ -467,24 +459,38 @@ void RendererGL::render() const
 
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
 
-   drawDepthMap();
-   //writeDepthTexture( "../depth.png" );
-
-   glEnable( GL_STENCIL_TEST );
-   switch (Algorithm) {
-      case ALGORITHM::Z_FAIL: drawShadowVolumeWithZFail(); break;
-      case ALGORITHM::Z_PASS: drawShadowVolumeWithZPass(); break;
-      //case ALGORITHM::GPU_GEMS3_CH11:
+   {
+      glViewport( 0, 0, FrameWidth, FrameHeight );
+      drawDepthMap();
+      glEnable( GL_STENCIL_TEST );
+      switch (AlgorithmToCompare) {
+         case ALGORITHM_TO_COMPARE::Z_FAIL: drawShadowVolumeWithZFail( false ); break;
+         case ALGORITHM_TO_COMPARE::Z_PASS: drawShadowVolumeWithZPass( false ); break;
+      }
+      drawShadow();
+      glDisable( GL_STENCIL_TEST );
    }
-   writeStencilTexture( "../stencil.png" );
-   drawShadow();
-   glDisable( GL_STENCIL_TEST );
+
+   {
+      glViewport( FrameWidth, 0, FrameWidth, FrameHeight );
+      drawDepthMap();
+      glEnable( GL_STENCIL_TEST );
+      switch (AlgorithmToCompare) {
+         case ALGORITHM_TO_COMPARE::Z_FAIL: drawShadowVolumeWithZFail( true ); break;
+         case ALGORITHM_TO_COMPARE::Z_PASS: drawShadowVolumeWithZPass( true ); break;
+      }
+      drawShadow();
+      glDisable( GL_STENCIL_TEST );
+   }
 
    std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
    const auto fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
    std::stringstream text;
+   if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::Z_FAIL) text << "Z-Fail Comparison ";
+   else text << "Z-Pass Comparison ";
+   text << "(Left: Not Robust, Right: Robust): ";
    text << std::fixed << std::setprecision( 2 ) << fps << " fps";
-   drawText( text.str(), { 50.0f, 1000.0f } );
+   drawText( text.str(), { 50.0f, 50.0f } );
 }
 
 void RendererGL::play()
