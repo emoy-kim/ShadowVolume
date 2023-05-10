@@ -43,7 +43,7 @@ private:
    std::unique_ptr<ShaderGL> ShadowVolumeShader;
    std::unique_ptr<ShaderGL> SceneShader;
    std::unique_ptr<ObjectGL> WallObject;
-   std::unique_ptr<ObjectGL> BunnyObject;
+   std::unique_ptr<ObjectGL> LucyObject;
    std::unique_ptr<LightGL> Lights;
    ALGORITHM_TO_COMPARE AlgorithmToCompare;
 
@@ -63,11 +63,11 @@ private:
 
    void setLights() const;
    void setWallObject() const;
-   void setBunnyObject() const;
+   void setLucyObject() const;
    static void getBoundingBox(std::array<glm::vec3, 8>& bounding_box, const std::array<glm::vec3, 8>& points);
 
    void drawBoxObject(ShaderGL* shader, const CameraGL* camera) const;
-   void drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const;
+   void drawLucyObject(ShaderGL* shader, const CameraGL* camera) const;
    void drawDepthMap() const;
    void drawShadowVolumeWithZFail(bool robust) const;
    void drawShadowVolumeWithZPass(bool robust) const;

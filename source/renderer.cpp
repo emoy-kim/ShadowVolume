@@ -5,7 +5,7 @@ RendererGL::RendererGL() :
    ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ), MainCamera( std::make_unique<CameraGL>() ),
    TextCamera( std::make_unique<CameraGL>() ), TextShader( std::make_unique<ShaderGL>() ),
    ShadowVolumeShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
-   WallObject( std::make_unique<ObjectGL>() ), BunnyObject( std::make_unique<ObjectGL>() ),
+   WallObject( std::make_unique<ObjectGL>() ), LucyObject( std::make_unique<ObjectGL>() ),
    Lights( std::make_unique<LightGL>() ), AlgorithmToCompare( ALGORITHM_TO_COMPARE::Z_FAIL )
 {
    Renderer = this;
@@ -236,7 +236,7 @@ void RendererGL::setLights() const
 
 void RendererGL::setWallObject() const
 {
-   constexpr float half_length = 128.0f;
+   constexpr float half_length = 512.0f;
    std::vector<glm::vec3> wall_vertices;
    wall_vertices.emplace_back( half_length, 0.0f, half_length );
    wall_vertices.emplace_back( half_length, 0.0f, -half_length );
@@ -259,14 +259,14 @@ void RendererGL::setWallObject() const
    WallObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
 }
 
-void RendererGL::setBunnyObject() const
+void RendererGL::setLucyObject() const
 {
    const std::string sample_directory_path = std::string(CMAKE_SOURCE_DIR) + "/samples";
-   BunnyObject->setObject(
+   LucyObject->setObject(
       GL_TRIANGLES_ADJACENCY,
-      std::string(sample_directory_path + "/Bunny/bunny.obj")
+      std::string(sample_directory_path + "/Lucy/lucy.obj")
    );
-   BunnyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
+   LucyObject->setDiffuseReflectionColor( { 1.0f, 1.0f, 1.0f, 1.0f } );
 }
 
 void RendererGL::getBoundingBox(std::array<glm::vec3, 8>& bounding_box, const std::array<glm::vec3, 8>& points)
@@ -303,7 +303,7 @@ void RendererGL::drawBoxObject(ShaderGL* shader, const CameraGL* camera) const
    glDrawArrays( WallObject->getDrawMode(), 0, WallObject->getVertexNum() );
 
    to_world =
-      glm::translate( glm::mat4(1.0f), glm::vec3(0.0f, 128.0f, -128.0f) ) *
+      glm::translate( glm::mat4(1.0f), glm::vec3(0.0f, 512.0f, -512.0f) ) *
       glm::rotate( glm::mat4(1.0f), glm::radians( 90.0f ), glm::vec3(1.0f, 0.0f, 0.0f) );
    shader->transferBasicTransformationUniforms( to_world, camera );
    WallObject->setDiffuseReflectionColor( { 0.0f, 1.0f, 0.0f, 1.0f } );
@@ -311,7 +311,7 @@ void RendererGL::drawBoxObject(ShaderGL* shader, const CameraGL* camera) const
    glDrawArrays( WallObject->getDrawMode(), 0, WallObject->getVertexNum() );
 
    to_world =
-      glm::translate( glm::mat4(1.0f), glm::vec3(-128.0f, 128.0f, 0.0f) ) *
+      glm::translate( glm::mat4(1.0f), glm::vec3(-512.0f, 512.0f, 0.0f) ) *
       glm::rotate( glm::mat4(1.0f), glm::radians( -90.0f ), glm::vec3(0.0f, 0.0f, 1.0f) );
    shader->transferBasicTransformationUniforms( to_world, camera );
    WallObject->setDiffuseReflectionColor( { 1.0f, 0.0f, 0.0f, 1.0f } );
@@ -319,19 +319,21 @@ void RendererGL::drawBoxObject(ShaderGL* shader, const CameraGL* camera) const
    glDrawArrays( WallObject->getDrawMode(), 0, WallObject->getVertexNum() );
 }
 
-void RendererGL::drawBunnyObject(ShaderGL* shader, const CameraGL* camera) const
+void RendererGL::drawLucyObject(ShaderGL* shader, const CameraGL* camera) const
 {
    const glm::mat4 to_world =
-      glm::translate( glm::mat4(1.0f), glm::vec3(0.0f, 10.0f, -30.0f) ) *
-      glm::scale( glm::mat4(1.0f), glm::vec3(100.0f, 100.0f, 100.0f) );
+      glm::translate( glm::mat4(1.0f), glm::vec3(100.0f, 200.0f, 30.0f) ) *
+      glm::rotate( glm::mat4(1.0f), glm::radians( 180.0f ), glm::vec3(0.0f, 0.0f, 1.0f) ) *
+      glm::rotate( glm::mat4(1.0f), glm::radians( 90.0f ), glm::vec3(1.0f, 0.0f, 0.0f) ) *
+      glm::scale( glm::mat4(1.0f), glm::vec3(0.35f, 0.35f, 0.35f) );
    shader->transferBasicTransformationUniforms( to_world, camera );
-   BunnyObject->transferUniformsToShader( shader );
+   LucyObject->transferUniformsToShader( shader );
 
-   glBindVertexArray( BunnyObject->getVAO() );
-   if (!BunnyObject->isAdjacencyMode()) glDrawArrays( BunnyObject->getDrawMode(), 0, BunnyObject->getVertexNum() );
+   glBindVertexArray( LucyObject->getVAO() );
+   if (!LucyObject->isAdjacencyMode()) glDrawArrays( LucyObject->getDrawMode(), 0, LucyObject->getVertexNum() );
    else {
-      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, BunnyObject->getIBO() );
-      glDrawElements( BunnyObject->getDrawMode(), BunnyObject->getIndexNum(), GL_UNSIGNED_INT, nullptr );
+      glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, LucyObject->getIBO() );
+      glDrawElements( LucyObject->getDrawMode(), LucyObject->getIndexNum(), GL_UNSIGNED_INT, nullptr );
    }
 }
 
@@ -341,7 +343,7 @@ void RendererGL::drawDepthMap() const
    glDepthFunc( GL_LESS );
    glDrawBuffer( GL_NONE );
    glUseProgram( SceneShader->getShaderProgram() );
-   drawBunnyObject( SceneShader.get(), MainCamera.get() );
+   drawLucyObject( SceneShader.get(), MainCamera.get() );
    drawBoxObject( SceneShader.get(), MainCamera.get() );
 }
 
@@ -367,7 +369,7 @@ void RendererGL::drawShadowVolumeWithZFail(bool robust) const
    ShadowVolumeShader->uniform4fv( "LightPosition", light_position_in_eye );
    ShadowVolumeShader->uniform1i( "Robust", robust ? 1 : 0 );
    ShadowVolumeShader->uniform1i( "IsZFailAlgorithm", 1 );
-   drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
+   drawLucyObject( ShadowVolumeShader.get(), MainCamera.get() );
 
    glDepthMask( GL_TRUE );
    glDisable( GL_DEPTH_CLAMP );
@@ -396,7 +398,7 @@ void RendererGL::drawShadowVolumeWithZPass(bool robust) const
    ShadowVolumeShader->uniform4fv( "LightPosition", light_position_in_eye );
    ShadowVolumeShader->uniform1i( "Robust", robust ? 1 : 0 );
    ShadowVolumeShader->uniform1i( "IsZFailAlgorithm", 0 );
-   drawBunnyObject( ShadowVolumeShader.get(), MainCamera.get() );
+   drawLucyObject( ShadowVolumeShader.get(), MainCamera.get() );
 
    glDepthMask( GL_TRUE );
    glDisable( GL_DEPTH_CLAMP );
@@ -411,13 +413,13 @@ void RendererGL::drawShadow() const
    glStencilFunc( GL_EQUAL, 0, 0xFF );
    glStencilOpSeparate( GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP );
 
-   glDepthFunc( GL_EQUAL );
+   glDepthFunc( GL_LEQUAL );
 
    glUseProgram( SceneShader->getShaderProgram() );
    Lights->transferUniformsToShader( SceneShader.get() );
    glUniform1i( SceneShader->getLocation( "LightIndex" ), ActiveLightIndex );
    glUniform1i( SceneShader->getLocation( "UseTexture" ), 0 );
-   drawBunnyObject( SceneShader.get(), MainCamera.get() );
+   drawLucyObject( SceneShader.get(), MainCamera.get() );
    drawBoxObject( SceneShader.get(), MainCamera.get() );
 }
 
@@ -511,7 +513,7 @@ void RendererGL::play()
 
    setLights();
    setWallObject();
-   setBunnyObject();
+   setLucyObject();
 
    TextShader->setTextUniformLocations();
    SceneShader->setSceneUniformLocations( 1 );
