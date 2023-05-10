@@ -32,6 +32,7 @@ private:
    inline static RendererGL* Renderer = nullptr;
    GLFWwindow* Window;
    bool Pause;
+   bool Robust;
    int FrameWidth;
    int FrameHeight;
    int ActiveLightIndex;

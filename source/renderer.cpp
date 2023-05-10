@@ -1,7 +1,7 @@
 #include "renderer.h"
 
 RendererGL::RendererGL() :
-   Window( nullptr ), Pause( false ), FrameWidth( 1500 ), FrameHeight( 1000 ), ActiveLightIndex( 0 ),
+   Window( nullptr ), Pause( false ), Robust( true ), FrameWidth( 1920 ), FrameHeight( 1080 ), ActiveLightIndex( 0 ),
    ClickedPoint( -1, -1 ), Texter( std::make_unique<TextGL>() ), MainCamera( std::make_unique<CameraGL>() ),
    TextCamera( std::make_unique<CameraGL>() ), TextShader( std::make_unique<ShaderGL>() ),
    ShadowVolumeShader( std::make_unique<ShaderGL>() ), SceneShader( std::make_unique<ShaderGL>() ),
@@ -36,7 +36,7 @@ void RendererGL::initialize()
    glfwWindowHint( GLFW_RESIZABLE, GLFW_FALSE );
    glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
-   Window = glfwCreateWindow( FrameWidth * 2, FrameHeight, "Shadow Volumes", nullptr, nullptr );
+   Window = glfwCreateWindow( FrameWidth, FrameHeight, "Shadow Volumes", nullptr, nullptr );
    glfwMakeContextCurrent( Window );
 
    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -147,6 +147,9 @@ void RendererGL::keyboard(GLFWwindow* window, int key, int scancode, int action,
             Renderer->AlgorithmToCompare = ALGORITHM_TO_COMPARE::Z_PASS;
             std::cout << "Z-Pass Algorithm Selected\n";
          }
+         break;
+      case GLFW_KEY_R:
+         if (!Renderer->Pause) Renderer->Robust = !Renderer->Robust;
          break;
       case GLFW_KEY_C:
          Renderer->writeFrame( "../result.png" );
@@ -297,7 +300,7 @@ void RendererGL::drawBoxObject(ShaderGL* shader, const CameraGL* camera) const
 {
    glm::mat4 to_world(1.0f);
    shader->transferBasicTransformationUniforms( to_world, camera );
-   WallObject->setDiffuseReflectionColor( { 0.0f, 0.0f, 1.0f, 1.0f } );
+   WallObject->setDiffuseReflectionColor( { 0.27f, 0.49f, 0.81f, 1.0f } );
    WallObject->transferUniformsToShader( shader );
    glBindVertexArray( WallObject->getVAO() );
    glDrawArrays( WallObject->getDrawMode(), 0, WallObject->getVertexNum() );
@@ -306,7 +309,7 @@ void RendererGL::drawBoxObject(ShaderGL* shader, const CameraGL* camera) const
       glm::translate( glm::mat4(1.0f), glm::vec3(0.0f, 512.0f, -512.0f) ) *
       glm::rotate( glm::mat4(1.0f), glm::radians( 90.0f ), glm::vec3(1.0f, 0.0f, 0.0f) );
    shader->transferBasicTransformationUniforms( to_world, camera );
-   WallObject->setDiffuseReflectionColor( { 0.0f, 1.0f, 0.0f, 1.0f } );
+   WallObject->setDiffuseReflectionColor( { 0.32f, 0.81f, 0.29f, 1.0f } );
    WallObject->transferUniformsToShader( shader );
    glDrawArrays( WallObject->getDrawMode(), 0, WallObject->getVertexNum() );
 
@@ -314,7 +317,7 @@ void RendererGL::drawBoxObject(ShaderGL* shader, const CameraGL* camera) const
       glm::translate( glm::mat4(1.0f), glm::vec3(-512.0f, 512.0f, 0.0f) ) *
       glm::rotate( glm::mat4(1.0f), glm::radians( -90.0f ), glm::vec3(0.0f, 0.0f, 1.0f) );
    shader->transferBasicTransformationUniforms( to_world, camera );
-   WallObject->setDiffuseReflectionColor( { 1.0f, 0.0f, 0.0f, 1.0f } );
+   WallObject->setDiffuseReflectionColor( { 0.83f, 0.35f, 0.29f, 1.0f } );
    WallObject->transferUniformsToShader( shader );
    glDrawArrays( WallObject->getDrawMode(), 0, WallObject->getVertexNum() );
 }
@@ -470,41 +473,26 @@ void RendererGL::render() const
    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 
    std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-   {
-      glViewport( 0, 0, FrameWidth, FrameHeight );
-      drawDepthMap();
-      glEnable( GL_STENCIL_TEST );
-      switch (AlgorithmToCompare) {
-         case ALGORITHM_TO_COMPARE::Z_FAIL: drawShadowVolumeWithZFail( false ); break;
-         case ALGORITHM_TO_COMPARE::Z_PASS: drawShadowVolumeWithZPass( false ); break;
-      }
-      drawShadow();
-      glDisable( GL_STENCIL_TEST );
-   }
-   std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
-   const auto left_fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
-   start = std::chrono::system_clock::now();
-   {
-      glViewport( FrameWidth, 0, FrameWidth, FrameHeight );
-      drawDepthMap();
-      glEnable( GL_STENCIL_TEST );
-      switch (AlgorithmToCompare) {
-         case ALGORITHM_TO_COMPARE::Z_FAIL: drawShadowVolumeWithZFail( true ); break;
-         case ALGORITHM_TO_COMPARE::Z_PASS: drawShadowVolumeWithZPass( true ); break;
-      }
-      drawShadow();
-      glDisable( GL_STENCIL_TEST );
+   glViewport( 0, 0, FrameWidth, FrameHeight );
+   drawDepthMap();
+   glEnable( GL_STENCIL_TEST );
+   switch (AlgorithmToCompare) {
+      case ALGORITHM_TO_COMPARE::Z_FAIL: drawShadowVolumeWithZFail( Robust ); break;
+      case ALGORITHM_TO_COMPARE::Z_PASS: drawShadowVolumeWithZPass( Robust ); break;
    }
-   end = std::chrono::system_clock::now();
-   const auto right_fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+   drawShadow();
+   glDisable( GL_STENCIL_TEST );
+
+   std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
+   const auto fps = 1E+6 / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
    std::stringstream text;
-   if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::Z_FAIL) text << "Z-Fail Comparison\n";
-   else text << "Z-Pass Comparison\n";
-   text << "- Left: Not Robust, " << std::fixed << std::setprecision( 2 ) << left_fps << " fps\n";
-   text << "- Right: Robust, " << std::fixed << std::setprecision( 2 ) << right_fps << " fps";
-   drawText( text.str(), { 80.0f, 120.0f } );
+   if (Robust) text << "Robust ";
+   if (AlgorithmToCompare == ALGORITHM_TO_COMPARE::Z_FAIL) text << "Z-Fail Algorithm: ";
+   else text << "Z-Pass Algorithm: ";
+   text << std::fixed << std::setprecision( 2 ) << fps << " fps";
+   drawText( text.str(), { 80.0f, 50.0f } );
 }
 
 void RendererGL::play()
