@@ -39,7 +39,7 @@ public:
       return static_cast<float>(value) * converter;
    }
    [[nodiscard]] const ObjectGL* getGlyphObject() const { return GlyphObject.get(); }
-   void initialize();
+   void initialize(float font_size);
    void getGlyphsFromText(std::vector<Glyph*>& glyphs, const std::string& text);
 
 private:

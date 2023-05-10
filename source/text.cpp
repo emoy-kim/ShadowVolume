@@ -13,13 +13,13 @@ TextGL::~TextGL()
    if (FontLibrary != nullptr) FT_Done_FreeType( FontLibrary );
 }
 
-void TextGL::initialize()
+void TextGL::initialize(float font_size)
 {
    if (FT_Init_FreeType( &FontLibrary )) std::cerr << "Could not initialize FreeType2 library\n";
 
    FT_New_Face( FontLibrary, FontFilePath.c_str(), 0, &FontFace );
-   const int width = convertFloatTo26Dot6( 50.0f );
-   const int height = convertFloatTo26Dot6( 50.0f );
+   const int width = convertFloatTo26Dot6( font_size );
+   const int height = convertFloatTo26Dot6( font_size );
    FT_Set_Char_Size( FontFace, width, height, 72, 72 );
 
    GlyphObject->setSquareObject( GL_TRIANGLES, true );
