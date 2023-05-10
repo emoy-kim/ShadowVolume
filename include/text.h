@@ -7,22 +7,24 @@ class TextGL final
 public:
    struct Glyph
    {
+      bool IsNewLine;
       glm::vec2 Size;
       glm::vec2 TopRightTextureCoord;
       glm::vec2 Advance;
       glm::vec2 Bearing;
       int TextureIDIndex;
 
-      Glyph() : Size(), TopRightTextureCoord(), Advance(), Bearing(), TextureIDIndex( -1 ) {}
+      Glyph() : IsNewLine( false ), Size(), TopRightTextureCoord(), Advance(), Bearing(), TextureIDIndex( -1 ) {}
       Glyph(
+         bool is_new_line,
          const glm::vec2& size,
          const glm::vec2& top_right_texture_coord,
          const glm::vec2& advance,
          const glm::vec2& bearing,
          int texture_id
       ) :
-         Size( size ), TopRightTextureCoord( top_right_texture_coord ), Advance( advance ), Bearing( bearing ),
-         TextureIDIndex( texture_id ) {}
+         IsNewLine( is_new_line ), Size( size ), TopRightTextureCoord( top_right_texture_coord ), Advance( advance ),
+         Bearing( bearing ), TextureIDIndex( texture_id ) {}
    };
 
    TextGL();
@@ -38,6 +40,7 @@ public:
       constexpr auto converter = 1.0f / static_cast<float>(1u << 6u);
       return static_cast<float>(value) * converter;
    }
+   [[nodiscard]] float getFontSize() const { return FontSize; }
    [[nodiscard]] const ObjectGL* getGlyphObject() const { return GlyphObject.get(); }
    void initialize(float font_size);
    void getGlyphsFromText(std::vector<Glyph*>& glyphs, const std::string& text);
@@ -54,6 +57,7 @@ private:
          Width( width ), Coverage( coverage ), Origin{ x, y } {}
    };
 
+   float FontSize;
    FT_Face FontFace;
    FT_Library FontLibrary;
    std::filesystem::path FontFilePath;

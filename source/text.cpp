@@ -1,7 +1,7 @@
 #include "text.h"
 
 TextGL::TextGL() :
-   FontFace( nullptr ), FontLibrary( nullptr ),
+   FontSize( 50.0f ), FontFace( nullptr ), FontLibrary( nullptr ),
    FontFilePath( std::filesystem::path(CMAKE_SOURCE_DIR) / "3rd_party/freetype2/RobotoMono.ttf" ),
    GlyphObject( std::make_unique<ObjectGL>() )
 {
@@ -17,6 +17,7 @@ void TextGL::initialize(float font_size)
 {
    if (FT_Init_FreeType( &FontLibrary )) std::cerr << "Could not initialize FreeType2 library\n";
 
+   FontSize = font_size;
    FT_New_Face( FontLibrary, FontFilePath.c_str(), 0, &FontFace );
    const int width = convertFloatTo26Dot6( font_size );
    const int height = convertFloatTo26Dot6( font_size );
@@ -28,6 +29,7 @@ void TextGL::initialize(float font_size)
 void TextGL::getGlyphsFromText(std::vector<Glyph*>& glyphs, const std::string& text)
 {
    for (const auto& c : text) {
+      const bool is_new_line = c == '\n';
       const FT_UInt glyph_index = FT_Get_Char_Index( FontFace, c );
       const auto glyph_it = GlyphFinder.find( glyph_index );
       if (FT_Load_Glyph( FontFace, glyph_index, FT_LOAD_NO_BITMAP )) {
@@ -66,6 +68,7 @@ void TextGL::getGlyphsFromText(std::vector<Glyph*>& glyphs, const std::string& t
          }
 
          auto glyph = std::make_unique<Glyph>(
+            is_new_line,
             glm::vec2{ width, height },
             glm::vec2{
                static_cast<float>(width) / static_cast<float>(glyph_width),
