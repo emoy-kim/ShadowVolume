@@ -111,9 +111,9 @@ vec4 calculateLightingEquation()
 
 void main()
 {
-   if (UseTexture == 0) final_color = vec4(one);
-   else final_color = texture( BaseTexture, tex_coord );
+   if (bool(UseTexture)) final_color = texture( BaseTexture, tex_coord );
+   else final_color = vec4(one);
 
-   if (UseLight != 0) final_color *= calculateLightingEquation();
+   if (bool(UseLight)) final_color *= calculateLightingEquation();
    else final_color *= Material.DiffuseColor;
 }
