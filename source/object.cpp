@@ -308,14 +308,15 @@ void ObjectGL::findNormals(
    normals.resize( vertices.size() );
    const auto size = static_cast<int>(vertex_indices.size());
    for (int i = 0; i < size; i += 3) {
-      const int n0 = vertex_indices[i];
-      const int n1 = vertex_indices[i + 1];
-      const int n2 = vertex_indices[i + 2];
+      const GLuint n0 = vertex_indices[i];
+      const GLuint n1 = vertex_indices[i + 1];
+      const GLuint n2 = vertex_indices[i + 2];
       const glm::vec3 normal = glm::cross( vertices[n1] - vertices[n0], vertices[n2] - vertices[n0] );
-      normals[n0] = normal;
-      normals[n1] = normal;
-      normals[n2] = normal;
+      normals[n0] += normal;
+      normals[n1] += normal;
+      normals[n2] += normal;
    }
+   for (auto& n : normals) glm::normalize( n );
 }
 
 void ObjectGL::findAdjacency(const std::vector<glm::vec3>& vertices, const std::vector<GLuint>& indices)
