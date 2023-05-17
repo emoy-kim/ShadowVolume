@@ -305,7 +305,7 @@ void ObjectGL::findNormals(
    const std::vector<GLuint>& vertex_indices
 )
 {
-   normals.resize( vertices.size() );
+   normals.resize( vertices.size(), glm::vec3(0.0f) );
    const auto size = static_cast<int>(vertex_indices.size());
    for (int i = 0; i < size; i += 3) {
       const GLuint n0 = vertex_indices[i];
