@@ -316,7 +316,7 @@ void ObjectGL::findNormals(
       normals[n1] += normal;
       normals[n2] += normal;
    }
-   for (auto& n : normals) glm::normalize( n );
+   for (auto& n : normals) n = glm::normalize( n );
 }
 
 void ObjectGL::findAdjacency(const std::vector<glm::vec3>& vertices, const std::vector<GLuint>& indices)
