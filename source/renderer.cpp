@@ -420,8 +420,8 @@ void RendererGL::drawShadow() const
 
    glUseProgram( SceneShader->getShaderProgram() );
    Lights->transferUniformsToShader( SceneShader.get() );
-   glUniform1i( SceneShader->getLocation( "LightIndex" ), ActiveLightIndex );
-   glUniform1i( SceneShader->getLocation( "UseTexture" ), 0 );
+   SceneShader->uniform1i( "LightIndex", ActiveLightIndex );
+   SceneShader->uniform1i( "UseTexture", 0 );
    drawLucyObject( SceneShader.get(), MainCamera.get() );
    drawBoxObject( SceneShader.get(), MainCamera.get() );
 }
